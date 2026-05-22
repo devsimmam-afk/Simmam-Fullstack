@@ -10,8 +10,9 @@ let _supabase: SupabaseClient | null = null
 if (isBrowser && url && anonKey) {
   _supabase = createClient(url, anonKey, {
     auth: {
-      persistSession: false,
+      persistSession: true,
       autoRefreshToken: false,
+      detectSessionInUrl: true,
     },
   })
 } else {
