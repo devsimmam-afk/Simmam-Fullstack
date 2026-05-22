@@ -9,7 +9,6 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
-import { requireTurnstile } from './middleware/turnstile'
 import { publicLimiter, authLimiter, registrationLimiter, adminLimiter, resetRateLimitCounts } from './middleware/rateLimiter'
 import { cacheMiddleware } from './middleware/cacheMiddleware'
 import {
@@ -1856,7 +1855,7 @@ app.post('/api/users/upsert', authLimiter, requireSignedInUser, async (req, res)
 })
 
 // Create registration: upsert user then insert registration
-app.post('/api/registrations', registrationLimiter, requireSignedInUser, requireTurnstile, async (req, res) => {
+app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (req, res) => {
   try {
     const parsedBody = validateRequest(publicRegistrationBodySchema, req.body)
     if (!parsedBody.ok) {
