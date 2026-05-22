@@ -49,6 +49,15 @@ async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T
 }
 
+async function safeAdminRequest<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await adminRequest<T>(path)
+  } catch (error) {
+    console.error(`Failed to fetch admin ${path}:`, error)
+    return fallback
+  }
+}
+
 export type AdminDashboardSummary = {
   totals: {
     users: number
@@ -131,7 +140,7 @@ export type AdminRuleRow = {
 }
 
 export async function fetchAdminLeaderboard(): Promise<AdminLeaderboardRow[]> {
-  const result = await adminRequest<{ data: AdminLeaderboardRow[] }>('/leaderboard')
+  const result = await safeAdminRequest<{ data: AdminLeaderboardRow[] }>('/leaderboard', { data: [] })
   return result.data || []
 }
 
@@ -163,12 +172,12 @@ export type AdminHouseRow = {
 }
 
 export async function fetchAdminEvents(): Promise<AdminEventRow[]> {
-  const result = await adminRequest<{ data: AdminEventRow[] }>('/events')
+  const result = await safeAdminRequest<{ data: AdminEventRow[] }>('/events', { data: [] })
   return result.data || []
 }
 
 export async function fetchAdminHouses(): Promise<AdminHouseRow[]> {
-  const result = await adminRequest<{ data: AdminHouseRow[] }>('/houses')
+  const result = await safeAdminRequest<{ data: AdminHouseRow[] }>('/houses', { data: [] })
   return result.data || []
 }
 
@@ -180,16 +189,20 @@ export async function adjustAdminLeaderboardPoints(houseId: string, points: numb
 }
 
 export async function fetchAdminDashboardSummary(): Promise<AdminDashboardSummary> {
-  return adminRequest<AdminDashboardSummary>('/dashboard-summary')
+  return safeAdminRequest<AdminDashboardSummary>('/dashboard-summary', {
+    totals: { users: 0, events: 0, registrations: 0, attendance: 0 },
+    upcomingEvents: [],
+    recentRegistrations: [],
+  })
 }
 
 export async function fetchAdminAnnouncements(): Promise<AdminAnnouncementRow[]> {
-  const result = await adminRequest<{ data: AdminAnnouncementRow[] }>('/announcements')
+  const result = await safeAdminRequest<{ data: AdminAnnouncementRow[] }>('/announcements', { data: [] })
   return result.data || []
 }
 
 export async function fetchAdminRules(): Promise<AdminRuleRow[]> {
-  const result = await adminRequest<{ data: AdminRuleRow[] }>('/rules')
+  const result = await safeAdminRequest<{ data: AdminRuleRow[] }>('/rules', { data: [] })
   return result.data || []
 }
 
@@ -315,7 +328,17 @@ export async function createAdminUser(payload: {
 }
 
 export async function fetchAdminUserDetails(userId: string): Promise<{ user: AdminUserRow; registrations: any[] }> {
-  return adminRequest<{ user: AdminUserRow; registrations: any[] }>(`/users/${encodeURIComponent(userId)}`)
+  return safeAdminRequest<{ user: AdminUserRow; registrations: any[] }>(`/users/${encodeURIComponent(userId)}`, {
+    user: {
+      user_id: userId,
+      name: '',
+      email: '',
+      house: '',
+      register_number: '',
+      created_at: '',
+    },
+    registrations: [],
+  })
 }
 
 export async function deleteAdminUser(userId: string): Promise<void> {
@@ -350,7 +373,7 @@ export async function fetchAdminRegistrations(params?: { search?: string; event?
   if (params?.event) query.set('event', params.event)
   if (params?.date) query.set('date', params.date)
   const suffix = query.toString() ? `?${query}` : ''
-  const result = await adminRequest<{ data: AdminRegistrationRow[] }>(`/registrations${suffix}`)
+  const result = await safeAdminRequest<{ data: AdminRegistrationRow[] }>(`/registrations${suffix}`, { data: [] })
   return result.data || []
 }
 
@@ -391,7 +414,7 @@ export async function exportAdminRegistrationsCsv(params?: { search?: string; ev
   if (params?.event) query.set('event', params.event)
   if (params?.date) query.set('date', params.date)
   const suffix = query.toString() ? `?${query}` : ''
-  return adminRequest<string>(`/registrations/export.csv${suffix}`)
+  return safeAdminRequest<string>(`/registrations/export.csv${suffix}`, '')
 }
 
 export async function createAdminEvent(payload: {
@@ -431,7 +454,13 @@ export async function closeAdminEventRegistration(eventId: string): Promise<void
 }
 
 export async function fetchAdminSettings(): Promise<AdminSettings> {
-  const result = await adminRequest<{ settings: AdminSettings }>('/settings')
+  const result = await safeAdminRequest<{ settings: AdminSettings }>('/settings', {
+    settings: {
+      festivalStatus: 'pre',
+      registrationsOpen: true,
+      coordinatorAssignments: {},
+    },
+  })
   return result.settings
 }
 
@@ -451,6 +480,6 @@ export async function checkInRegistration(registrationId: string): Promise<void>
 }
 
 export async function fetchAttendanceReport(): Promise<Array<{ event_name: string; event_date: string; total: number; checked_in: number; attendance_rate: number }>> {
-  const result = await adminRequest<{ data: Array<{ event_name: string; event_date: string; total: number; checked_in: number; attendance_rate: number }> }>('/attendance-report')
+  const result = await safeAdminRequest<{ data: Array<{ event_name: string; event_date: string; total: number; checked_in: number; attendance_rate: number }> }>('/attendance-report', { data: [] })
   return result.data || []
 }

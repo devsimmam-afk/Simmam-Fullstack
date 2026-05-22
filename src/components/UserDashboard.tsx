@@ -164,7 +164,13 @@ function DetailedODCard({
     <article className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#111] to-[#0a0a0a] p-6 md:p-8 shadow-[0_0_30px_rgba(212,175,55,0.03)] transition-all hover:border-[#D4AF37]/50 hover:shadow-[0_0_40px_rgba(212,175,55,0.08)]">
       {/* Background decorations */}
       <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#D4AF37]/5 blur-[80px]" />
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay" />
+      <div
+        className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            'repeating-radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 1px, transparent 2px, transparent 5px)',
+        }}
+      />
       
       <div className="relative z-10">
         <div className="mb-6 flex flex-col md:flex-row md:items-start justify-between border-b border-white/10 pb-6 gap-4">

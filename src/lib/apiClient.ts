@@ -109,20 +109,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T
 }
 
+async function safeRequest<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await request<T>(path)
+  } catch (error) {
+    console.error(`Failed to fetch ${path}:`, error)
+    return fallback
+  }
+}
+
 export async function fetchEvents(): Promise<ApiEvent[]> {
-  const payload = await request<{ data?: ApiEvent[] } | ApiEvent[]>('/events')
+  const payload = await safeRequest<{ data?: ApiEvent[] } | ApiEvent[]>('/events', [])
   if (Array.isArray(payload)) return payload
   return payload.data || []
 }
 
 export async function fetchHouses(): Promise<Array<{ id: string; name: string; accent: string; points: number }>> {
-  const payload = await request<{ data?: Array<{ id: string; name: string; accent: string; points: number }> } | Array<{ id: string; name: string; accent: string; points: number }>>('/houses')
+  const payload = await safeRequest<{ data?: Array<{ id: string; name: string; accent: string; points: number }> } | Array<{ id: string; name: string; accent: string; points: number }>>('/houses', [])
   if (Array.isArray(payload)) return payload
   return payload.data || []
 }
 
 export async function fetchLeaderboard(): Promise<Array<{ house_id: string; house_name: string; total_points?: number; points?: number }>> {
-  const payload = await request<{ data?: Array<{ house_id: string; house_name: string; total_points?: number; points?: number }> } | Array<{ house_id: string; house_name: string; total_points?: number; points?: number }>>('/leaderboard')
+  const payload = await safeRequest<{ data?: Array<{ house_id: string; house_name: string; total_points?: number; points?: number }> } | Array<{ house_id: string; house_name: string; total_points?: number; points?: number }>>('/leaderboard', [])
   if (Array.isArray(payload)) return payload
   return payload.data || []
 }
@@ -148,17 +157,17 @@ export async function createRegistration(payload: CreateRegistrationPayload): Pr
 
 export async function fetchUserRegistrations(email: string): Promise<ApiRegistration[]> {
   const encoded = encodeURIComponent(email.trim().toLowerCase())
-  const payload = await request<{ registrations: ApiRegistration[] }>(`/users/${encoded}/registrations`)
+  const payload = await safeRequest<{ registrations: ApiRegistration[] }>(`/users/${encoded}/registrations`, { registrations: [] })
   return payload.registrations || []
 }
 
 export async function fetchAnnouncements(): Promise<ApiAnnouncement[]> {
-  const payload = await request<{ data: ApiAnnouncement[] }>('/announcements')
+  const payload = await safeRequest<{ data: ApiAnnouncement[] }>('/announcements', { data: [] })
   return payload.data || []
 }
 
 export async function fetchRules(): Promise<ApiRule[]> {
-  const payload = await request<{ data: ApiRule[] }>('/rules')
+  const payload = await safeRequest<{ data: ApiRule[] }>('/rules', { data: [] })
   return payload.data || []
 }
 
@@ -173,14 +182,16 @@ export async function fetchUserProfileByEmail(email: string): Promise<{
   } | null
 }> {
   const encoded = encodeURIComponent(email.trim().toLowerCase())
-  return request<{ user: {
+  return safeRequest<{ user: {
     email: string
     name: string
     mobile_number?: string
     register_number?: string
     house?: string
     picture_url?: string
-  } | null }>(`/users/${encoded}/registrations`)
+  } | null }>(`/users/${encoded}/registrations`, {
+    user: null,
+  })
 }
 
 export async function upsertUserProfile(payload: {
