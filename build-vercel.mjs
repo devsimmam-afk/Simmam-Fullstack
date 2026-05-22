@@ -62,6 +62,7 @@ const mainPkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "ut
 const runtimeDeps = {};
 const needed = [
   "h3-v2", "@tanstack/router-core", "@tanstack/react-router", "@tanstack/history",
+  "@supabase/supabase-js",
   "seroval", "react", "react-dom", "lucide-react", "react-icons",
   "@radix-ui/react-dialog", "class-variance-authority", "clsx", "tailwind-merge",
   "@tanstack/react-store", "seroval-plugins", "isbot",
