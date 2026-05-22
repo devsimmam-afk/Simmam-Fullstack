@@ -368,6 +368,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, now: new Date().toISOString() })
 })
 
+app.get('/', (_req, res) => {
+  res.status(200).json({ status: 'healthy', message: 'API is running' })
+})
+
 // Get events
 app.get('/api/events', publicLimiter, cacheMiddleware(300), async (req, res) => {
   try {
