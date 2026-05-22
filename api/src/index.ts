@@ -1917,27 +1917,42 @@ app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (
       return res.status(409).json({ error: 'already_registered' })
     }
 
-    const ticketSeed = `${userId}:${resolvedEventId}:${Date.now()}`
-    const ticketCode = `SMM-${Buffer.from(ticketSeed).toString('hex').slice(0, 8).toUpperCase()}`
+    const registrationSelect = 'id,ticket_code,registered_at,status,user_id,event_id,users(id,name,email,house,register_number),events(id,name,date,time_slot,end_time,venue)'
+    let insertedRow: any = null
 
-    const { data: insertedRow, error: insertErr } = await supabase
-      .from('registrations')
-      .insert({
-        user_id: userId,
-        event_id: resolvedEventId,
-        ticket_code: ticketCode,
-      })
-      .select('id,ticket_code,registered_at,status,user_id,event_id,users(id,name,email,house,register_number),events(id,name,date,time_slot,end_time,venue)')
-      .single()
+    for (let attempt = 0; attempt < 5 && !insertedRow; attempt += 1) {
+      const ticketCode = `SMM-${randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`
 
-    if (insertErr) {
-      if (insertErr.message?.includes('registrations_unique_user_event')) {
-        return res.status(409).json({ error: 'already_registered' })
+      const { data, error: insertErr } = await supabase
+        .from('registrations')
+        .insert({
+          user_id: userId,
+          event_id: resolvedEventId,
+          ticket_code: ticketCode,
+        })
+        .select(registrationSelect)
+        .single()
+
+      if (!insertErr && data) {
+        insertedRow = data
+        break
       }
-      if (insertErr.message?.includes('event_not_found')) {
-        return res.status(404).json({ error: 'event_not_found' })
+
+      if (insertErr) {
+        if (insertErr.message?.includes('registrations_unique_user_event')) {
+          return res.status(409).json({ error: 'already_registered' })
+        }
+        if (insertErr.message?.includes('event_not_found')) {
+          return res.status(404).json({ error: 'event_not_found' })
+        }
+        if (insertErr.code !== '23505') {
+          throw insertErr
+        }
       }
-      throw insertErr
+    }
+
+    if (!insertedRow) {
+      return res.status(500).json({ error: 'registration_failed' })
     }
 
     res.status(201).json({
