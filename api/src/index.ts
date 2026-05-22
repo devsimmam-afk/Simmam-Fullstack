@@ -156,19 +156,32 @@ const attachAdminContext = async (req: express.Request, res: express.Response, n
     return res.status(401).json({ error: 'unauthorized' })
   }
 
-  const { data, error } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('id,name,email,admins!inner(role,assigned_event_id)')
+    .select('id,name,email')
     .ilike('email', authUser.email)
     .limit(1)
 
-  if (error) {
-    return res.status(500).json({ error: error.message || 'unknown' })
+  if (userError) {
+    return res.status(500).json({ error: userError.message || 'unknown' })
   }
 
-  const userRow = Array.isArray(data) ? data[0] : data
-  const adminRow = getSingleRelationsRow(userRow?.admins as any)
-  if (!userRow || !adminRow || typeof adminRow !== 'object' || !('role' in adminRow)) {
+  const userRow = Array.isArray(userData) ? userData[0] : userData
+  if (!userRow) {
+    return res.status(403).json({ error: 'admin_required' })
+  }
+
+  const { data: adminRow, error: adminError } = await supabase
+    .from('admins')
+    .select('role,assigned_event_id')
+    .eq('user_id', userRow.id)
+    .maybeSingle()
+
+  if (adminError) {
+    return res.status(500).json({ error: adminError.message || 'unknown' })
+  }
+
+  if (!adminRow || typeof adminRow !== 'object' || !('role' in adminRow)) {
     return res.status(403).json({ error: 'admin_required' })
   }
 
@@ -513,28 +526,37 @@ app.post('/api/wch1925/auth', publicLimiter, async (req, res) => {
       return res.status(403).json({ error: 'email_mismatch' })
     }
 
-    const { data, error } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id,name,email,admins!inner(role,assigned_event_id)')
+      .select('id,name,email')
       .ilike('email', email)
-      .eq('admins.role', role)
       .limit(1)
 
-    if (error) {
-      throw error
+    if (userError) {
+      throw userError
     }
 
-    const user = Array.isArray(data) ? data[0] : data
-    if (!user || !user.admins) {
+    const user = Array.isArray(userData) ? userData[0] : userData
+    if (!user) {
       return res.status(401).json({ error: 'not_admin' })
     }
 
-    const admin = getSingleRelationsRow(user.admins as any)
-    if (!admin || typeof admin !== 'object' || !('role' in admin)) {
+    const { data: adminRow, error: adminError } = await supabase
+      .from('admins')
+      .select('role,assigned_event_id')
+      .eq('user_id', user.id)
+      .eq('role', role)
+      .maybeSingle()
+
+    if (adminError) {
+      throw adminError
+    }
+
+    if (!adminRow || typeof adminRow !== 'object' || !('role' in adminRow)) {
       return res.status(401).json({ error: 'not_admin' })
     }
 
-    if ((admin as any).role !== role) {
+    if ((adminRow as any).role !== role) {
       return res.status(403).json({ error: 'role_mismatch' })
     }
 
@@ -543,8 +565,8 @@ app.post('/api/wch1925/auth', publicLimiter, async (req, res) => {
         id: user.id,
         name: user.name || user.email,
         email: user.email,
-        role: (admin as any).role,
-        assignedEvent: (admin as any).assigned_event_id || undefined,
+        role: (adminRow as any).role,
+        assignedEvent: (adminRow as any).assigned_event_id || undefined,
       },
     })
   } catch (err: any) {
