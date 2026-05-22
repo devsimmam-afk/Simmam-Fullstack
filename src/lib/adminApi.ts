@@ -1,10 +1,10 @@
 import adminSupabase from '@/lib/adminSupabase'
 
-const adminBase = (() => {
+export const getAdminApiBase = (path = '') => {
   const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
-  if (!raw) return '/api/wch1925'
-  return `${raw.replace(/\/$/, '')}/api/wch1925`
-})()
+  const base = raw ? `${raw.replace(/\/$/, '')}/api/wch1925` : '/api/wch1925'
+  return path ? `${base}${path}` : base
+}
 
 async function getAdminAuthHeaders(): Promise<Record<string, string>> {
   try {
@@ -19,7 +19,7 @@ async function getAdminAuthHeaders(): Promise<Record<string, string>> {
 }
 
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${adminBase}${path}`, {
+  const response = await fetch(getAdminApiBase(path), {
     ...init,
     headers: {
       'Content-Type': 'application/json',

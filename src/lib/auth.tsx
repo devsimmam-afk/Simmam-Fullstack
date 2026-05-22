@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import type { AdminUser, AdminRole } from '@/types/admin'
 import { ROLE_PERMISSIONS, ROUTE_PERMISSIONS } from '@/types/admin'
 import adminSupabase from '@/lib/adminSupabase'
+import { getAdminApiBase } from '@/lib/adminApi'
 
 interface AuthContextType {
   user: AdminUser | null
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = sessionData.session?.access_token
       if (!token) return false
 
-      const response = await fetch('/api/wch1925/auth', {
+      const response = await fetch(getAdminApiBase('/auth'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
