@@ -1,8 +1,4 @@
-netstat -ano | Select-String ":4000"
-# note the PID from the output, then:
-taskkill /PID <PID> /F
-# or use kill-port:
-npx kill-port 4000import { allEvents as initialEvents, type Event } from './eventsData';
+import { allEvents as initialEvents, type Event } from './eventsData';
 import { houses as initialHouses, type House } from './houses';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { fetchEvents, fetchHouses, fetchLeaderboard } from './apiClient';
