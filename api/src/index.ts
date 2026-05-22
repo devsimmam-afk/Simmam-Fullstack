@@ -1863,6 +1863,13 @@ app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (
     }
 
     const { email, name, register_number, house, event_id, event_name } = parsedBody.data
+    const authUser = (req as any).authenticatedUser as AuthenticatedUser | undefined
+    if (!authUser?.email) {
+      return res.status(401).json({ error: 'missing_auth_token' })
+    }
+
+    const normalizedEmail = String(email || authUser.email).trim().toLowerCase()
+    const normalizedName = String(name || authUser.name || normalizedEmail).trim()
 
     let resolvedEventId = event_id as string | undefined
 
@@ -1880,29 +1887,71 @@ app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (
       resolvedEventId = eventRow.id
     }
 
-    // Use service-role RPC that accepts user id to avoid client-side RPC bypass
-    const userId = (req as any).authenticatedUser?.id
-    const { data: rpcData, error: rpcErr } = await supabase.rpc('create_registration_safe', {
-      p_user_id: userId,
-      p_event_id: resolvedEventId,
-    })
+    const { data: userRow, error: userErr } = await supabase
+      .from('users')
+      .upsert(
+        {
+          email: normalizedEmail,
+          name: normalizedName,
+          register_number: register_number || null,
+          house: house || null,
+        },
+        { onConflict: 'email' },
+      )
+      .select('id,name,email,register_number,house')
+      .single()
 
-    if (rpcErr) {
-      if (rpcErr.message?.includes('already_registered')) {
+    if (userErr) throw userErr
+
+    const userId = userRow.id as string
+
+    const { data: existingRegistration, error: existingErr } = await supabase
+      .from('registrations')
+      .select('id,ticket_code,registered_at,status,user_id,event_id,users(id,name,email,house,register_number),events(id,name,date,time_slot,end_time,venue)')
+      .eq('user_id', userId)
+      .eq('event_id', resolvedEventId)
+      .maybeSingle()
+
+    if (existingErr) throw existingErr
+    if (existingRegistration) {
+      return res.status(409).json({ error: 'already_registered' })
+    }
+
+    const ticketSeed = `${userId}:${resolvedEventId}:${Date.now()}`
+    const ticketCode = `SMM-${Buffer.from(ticketSeed).toString('hex').slice(0, 8).toUpperCase()}`
+
+    const { data: insertedRow, error: insertErr } = await supabase
+      .from('registrations')
+      .insert({
+        user_id: userId,
+        event_id: resolvedEventId,
+        ticket_code: ticketCode,
+      })
+      .select('id,ticket_code,registered_at,status,user_id,event_id,users(id,name,email,house,register_number),events(id,name,date,time_slot,end_time,venue)')
+      .single()
+
+    if (insertErr) {
+      if (insertErr.message?.includes('registrations_unique_user_event')) {
         return res.status(409).json({ error: 'already_registered' })
       }
-      if (rpcErr.message?.includes('event_not_found')) {
+      if (insertErr.message?.includes('event_not_found')) {
         return res.status(404).json({ error: 'event_not_found' })
       }
-      throw rpcErr
+      throw insertErr
     }
 
-    const registration = Array.isArray(rpcData) ? rpcData[0] : rpcData
-    if (!registration) {
-      return res.status(500).json({ error: 'registration_failed' })
-    }
-
-    res.status(201).json(registration)
+    res.status(201).json({
+      registration_id: insertedRow.id,
+      user_id: userRow.id,
+      participant_name: userRow.name,
+      email: userRow.email,
+      register_number: userRow.register_number,
+      house: userRow.house,
+      event_id: insertedRow.event_id,
+      event_name: getSingleRelationsRow(insertedRow.events)?.name || '',
+      registration: insertedRow,
+      ticket_code: insertedRow.ticket_code,
+    })
   } catch (err: any) {
     console.error(err)
     res.status(500).json({ error: err.message || 'unknown' })
