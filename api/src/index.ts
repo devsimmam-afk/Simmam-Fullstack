@@ -4,10 +4,12 @@ import dotenv from 'dotenv'
 import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
+import * as Sentry from '@sentry/node'
 import { randomUUID } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
+import { requireTurnstile } from './middleware/turnstile'
 import { publicLimiter, authLimiter, registrationLimiter, adminLimiter, resetRateLimitCounts } from './middleware/rateLimiter'
 import { cacheMiddleware } from './middleware/cacheMiddleware'
 import {
@@ -32,6 +34,8 @@ import {
 
 dotenv.config()
 
+require('./instrument')
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000
@@ -48,33 +52,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
 const app = express()
 app.set('trust proxy', 1)
-const localDevOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/
-const allowedOrigins = new Set<string>()
-if (FRONTEND_URL) allowedOrigins.add(FRONTEND_URL)
-if (!IS_PROD) {
-  allowedOrigins.add('http://localhost:5173')
-  allowedOrigins.add('http://localhost:8080')
-  allowedOrigins.add('http://127.0.0.1:5173')
-  allowedOrigins.add('http://127.0.0.1:8080')
-}
 
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      callback(null, true)
-      return
-    }
-
-    if (allowedOrigins.has(origin) || (!IS_PROD && localDevOriginPattern.test(origin))) {
-      callback(null, true)
-      return
-    }
-
-    const corsError = new Error(`CORS blocked origin: ${origin}`) as Error & { statusCode?: number; code?: string }
-    corsError.statusCode = 403
-    corsError.code = 'cors_blocked'
-    callback(corsError)
-  },
+  origin: true,
   credentials: false,
   optionsSuccessStatus: 204,
 }
@@ -1835,7 +1815,7 @@ app.post('/api/users/upsert', authLimiter, requireSignedInUser, async (req, res)
 })
 
 // Create registration: upsert user then insert registration
-app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (req, res) => {
+app.post('/api/registrations', registrationLimiter, requireSignedInUser, requireTurnstile, async (req, res) => {
   try {
     const parsedBody = validateRequest(publicRegistrationBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -1965,10 +1945,16 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'not_found' })
 })
 
+Sentry.setupExpressErrorHandler(app)
+
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   const error = err as Error & { statusCode?: number; code?: string; type?: string }
   const statusCode = error.statusCode || (error.type === 'entity.too.large' ? 413 : 500)
   const code = error.code || (error.type === 'entity.too.large' ? 'payload_too_large' : 'internal_server_error')
+
+  if (statusCode >= 500) {
+    Sentry.captureException(err)
+  }
 
   console.error({
     requestId: (req as any).requestId,
