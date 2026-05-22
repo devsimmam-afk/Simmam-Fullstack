@@ -260,23 +260,22 @@ type EventCatalogItem = {
   rules: string[]
 }
 
-const getEventCatalogPath = () => {
+const getEventCatalogPath = (): string | null => {
   const candidates = [
     path.resolve(process.cwd(), '../src/lib/eventsData.ts'),
     path.resolve(__dirname, '../../src/lib/eventsData.ts'),
     path.resolve(process.cwd(), 'src/lib/eventsData.ts'),
   ]
 
-  const existingPath = candidates.find((candidate) => fs.existsSync(candidate))
-  if (!existingPath) {
-    throw new Error('Unable to locate src/lib/eventsData.ts for event catalog seeding')
-  }
-
-  return existingPath
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null
 }
 
 const extractEventCatalog = (): EventCatalogItem[] => {
   const catalogPath = getEventCatalogPath()
+  if (!catalogPath) {
+    return []
+  }
+
   const source = fs.readFileSync(catalogPath, 'utf8')
   const arrayStart = source.indexOf('export const allEvents: Event[] = [')
   const arrayEnd = source.lastIndexOf('];')
@@ -305,6 +304,11 @@ const extractEventCatalog = (): EventCatalogItem[] => {
 
 const seedMissingEvents = async () => {
   const catalog = extractEventCatalog()
+  if (catalog.length === 0) {
+    console.warn('Skipping event catalog seeding: src/lib/eventsData.ts is not available in this deployment')
+    return
+  }
+
   const { data: existingRows, error: existingErr } = await supabase.from('events').select('slug')
   if (existingErr) throw existingErr
 
