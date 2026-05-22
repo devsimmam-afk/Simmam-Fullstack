@@ -65,12 +65,9 @@ export type CreateRegistrationPayload = {
 }
 
 import supabase from '@/lib/supabase'
+import { resolveApiBase } from '@/lib/apiBase'
 
-const apiBase = (() => {
-  const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
-  if (!raw) return '/api'
-  return `${raw.replace(/\/$/, '')}/api`
-})()
+const apiBase = resolveApiBase(import.meta.env.VITE_API_URL as string | undefined)
 
 async function getUserAuthHeaders(): Promise<Record<string, string>> {
   try {
@@ -95,7 +92,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   const text = await response.text()
-  const payload = text ? JSON.parse(text) : null
+  let payload: any = null
+  if (text) {
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      payload = { message: text }
+    }
+  }
 
   if (!response.ok) {
     const message = payload?.error || payload?.message || `Request failed (${response.status})`

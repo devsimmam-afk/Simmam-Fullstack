@@ -8,6 +8,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer";
 
+const apiProxyTarget = (() => {
+  const raw = process.env.VITE_API_URL?.trim();
+  if (!raw) return "http://localhost:4000";
+  return raw.replace(/\/+$/, "").replace(/\/api$/i, "");
+})();
+
 export default defineConfig({
   cloudflare: true,
   vite: {
@@ -17,7 +23,7 @@ export default defineConfig({
     server: {
       proxy: {
         '/api': {
-          target: process.env.VITE_API_URL || 'http://localhost:4000',
+          target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },

@@ -1,8 +1,8 @@
 import adminSupabase from '@/lib/adminSupabase'
+import { resolveAdminApiBase } from '@/lib/apiBase'
 
 export const getAdminApiBase = (path = '') => {
-  const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
-  const base = raw ? `${raw.replace(/\/$/, '')}/api/wch1925` : '/api/wch1925'
+  const base = resolveAdminApiBase(import.meta.env.VITE_API_URL as string | undefined)
   return path ? `${base}${path}` : base
 }
 
@@ -33,7 +33,14 @@ async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const text = await response.text()
-  const payload = text ? JSON.parse(text) : null
+  let payload: any = null
+  if (text) {
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      payload = { message: text }
+    }
+  }
 
   if (!response.ok) {
     throw new Error(payload?.error || payload?.message || `Request failed (${response.status})`)

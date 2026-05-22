@@ -33,18 +33,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  // Suppress 404 errors from tracking/external scripts
-  React.useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      if (event.message.includes('Failed to load') || 
-          (event.filename && event.filename.includes('hybridaction'))) {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener('error', handleError, true);
-    return () => window.removeEventListener('error', handleError, true);
-  }, []);
-
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <Loader />
