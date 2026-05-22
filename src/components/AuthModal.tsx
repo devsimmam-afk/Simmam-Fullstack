@@ -10,6 +10,7 @@ import {
   type UserProfile,
 } from '@/lib/registrationStore'
 import { fetchUserProfileByEmail } from '@/lib/apiClient'
+import { getAppUrl } from '@/lib/appUrl'
 import supabase from '@/lib/supabase'
 
 export type RegistrationEvent = {
@@ -111,7 +112,7 @@ export function AuthModal({ event, onClose, onRegistered }: AuthModalProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.href,
+          redirectTo: getAppUrl(`/register?event=${encodeURIComponent(event.id)}`),
           queryParams: { hd: 'saveetha.com' },
         },
       })

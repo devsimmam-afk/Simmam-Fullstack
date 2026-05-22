@@ -7,6 +7,7 @@ import { UserDashboard } from '@/components/UserDashboard'
 import { UserSetupModal } from '@/components/UserSetupModal'
 import { getUser, saveUser, clearUser, type UserProfile } from '@/lib/registrationStore'
 import { fetchUserProfileByEmail } from '@/lib/apiClient'
+import { getAppUrl } from '@/lib/appUrl'
 import supabase from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -212,7 +213,7 @@ export function ProfilePage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/profile`,
+          redirectTo: getAppUrl('/profile'),
           queryParams: { hd: 'saveetha.com' },
         },
       })

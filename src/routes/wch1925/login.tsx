@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 
 import { useAuth, getAuthorizedAdminRedirect, getStoredAdminUser } from '@/lib/auth'
+import { getAppUrl } from '@/lib/appUrl'
 import type { AdminRole } from '@/types/admin'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -111,7 +112,7 @@ function LoginPage() {
       const { error: authError } = await adminSupabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/wch1925/login`,
+          redirectTo: getAppUrl('/wch1925/login'),
         },
       })
       if (authError) {
