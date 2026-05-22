@@ -26,3 +26,5 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      - key: SEED_EVENT_CATALOG
+        value: "false"

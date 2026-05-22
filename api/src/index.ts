@@ -41,6 +41,7 @@ const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000
 const FRONTEND_URL = process.env.FRONTEND_URL
 const IS_PROD = process.env.NODE_ENV === 'production'
+const SEED_EVENT_CATALOG = process.env.SEED_EVENT_CATALOG === 'true'
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE in env')
@@ -1921,10 +1922,14 @@ app.get('/api/users/:email/registrations', publicLimiter, requireSignedInUser, c
 })
 
 const bootstrap = async () => {
-  try {
-    await seedMissingEvents()
-  } catch (err: any) {
-    console.error('Failed to seed event catalog:', err?.message || err)
+  if (SEED_EVENT_CATALOG) {
+    try {
+      await seedMissingEvents()
+    } catch (err: any) {
+      console.error('Failed to seed event catalog:', err?.message || err)
+    }
+  } else {
+    console.log('Event catalog seeding disabled (set SEED_EVENT_CATALOG=true to enable)')
   }
 
   app.listen(PORT, '0.0.0.0', () => {

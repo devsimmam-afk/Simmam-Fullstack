@@ -34,5 +34,6 @@ Render deployment (Blueprint):
 	- `FRONTEND_URL`
 	- `REDIS_URL`
 	- `SENTRY_DSN`
+	- `SEED_EVENT_CATALOG=true` only if you want startup seeding enabled
 6. Verify health endpoint after deploy:
 	- `GET /api/health`
