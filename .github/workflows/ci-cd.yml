@@ -30,26 +30,7 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Upload frontend sourcemaps to Sentry
-        if: github.ref == 'refs/heads/main' && secrets.SENTRY_AUTH_TOKEN != '' && secrets.SENTRY_ORG != '' && secrets.SENTRY_PROJECT_WEB != ''
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_WEB }}
-          SENTRY_RELEASE: ${{ github.sha }}
-        run: |
-          npx @sentry/cli releases new "$SENTRY_RELEASE"
-          npx @sentry/cli releases files "$SENTRY_RELEASE" upload-sourcemaps ./dist --rewrite --url-prefix "~/"
-          npx @sentry/cli releases finalize "$SENTRY_RELEASE"
-      - name: Upload API sourcemaps to Sentry
-        if: github.ref == 'refs/heads/main' && secrets.SENTRY_AUTH_TOKEN != '' && secrets.SENTRY_ORG != '' && secrets.SENTRY_PROJECT_API != ''
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_API }}
-          SENTRY_RELEASE: ${{ github.sha }}
-        run: |
-          npx @sentry/cli releases files "$SENTRY_RELEASE" upload-sourcemaps ./api/dist --rewrite --url-prefix "app:///"
+      # Sentry sourcemap upload removed (Sentry integration removed)
       - name: Run lint
         run: npm run lint || true
 

@@ -84,7 +84,7 @@ export const publicRegistrationBodySchema = z.object({
   house: z.union([z.string(), z.null(), z.undefined()]).optional(),
   event_id: z.string().uuid().optional(),
   event_name: z.union([z.string(), z.null(), z.undefined()]).optional(),
-  turnstile_token: z.union([nonEmptyString, z.null(), z.undefined()]).optional(),
+  // removed Turnstile token
 })
 
 export const adminRegistrationCreateBodySchema = z.object({

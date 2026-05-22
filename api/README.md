@@ -32,8 +32,6 @@ Render deployment (Blueprint):
 5. Set optional variables if used in your environment:
 	- `SUPABASE_ANON_KEY`
 	- `FRONTEND_URL`
-	- `REDIS_URL`
-	- `SENTRY_DSN`
 	- `SEED_EVENT_CATALOG=true` only if you want startup seeding enabled
 6. Verify health endpoint after deploy:
 	- `GET /api/health`

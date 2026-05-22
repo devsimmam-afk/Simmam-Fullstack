@@ -22,9 +22,7 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: SENTRY_DSN
+      - key: FRONTEND_URL
         sync: false
       - key: SEED_EVENT_CATALOG
         value: "false"

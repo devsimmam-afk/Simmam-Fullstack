@@ -4,12 +4,10 @@ import dotenv from 'dotenv'
 import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
-import * as Sentry from '@sentry/node'
 import { randomUUID } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
-import { requireTurnstile } from './middleware/turnstile'
 import { publicLimiter, authLimiter, registrationLimiter, adminLimiter, resetRateLimitCounts } from './middleware/rateLimiter'
 import { cacheMiddleware } from './middleware/cacheMiddleware'
 import {
@@ -33,8 +31,6 @@ import {
 } from './validation'
 
 dotenv.config()
-
-require('./instrument')
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
@@ -1839,7 +1835,7 @@ app.post('/api/users/upsert', authLimiter, requireSignedInUser, async (req, res)
 })
 
 // Create registration: upsert user then insert registration
-app.post('/api/registrations', registrationLimiter, requireSignedInUser, requireTurnstile, async (req, res) => {
+app.post('/api/registrations', registrationLimiter, requireSignedInUser, async (req, res) => {
   try {
     const parsedBody = validateRequest(publicRegistrationBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -1969,16 +1965,10 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'not_found' })
 })
 
-Sentry.setupExpressErrorHandler(app)
-
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   const error = err as Error & { statusCode?: number; code?: string; type?: string }
   const statusCode = error.statusCode || (error.type === 'entity.too.large' ? 413 : 500)
   const code = error.code || (error.type === 'entity.too.large' ? 'payload_too_large' : 'internal_server_error')
-
-  if (statusCode >= 500) {
-    Sentry.captureException(err)
-  }
 
   console.error({
     requestId: (req as any).requestId,

@@ -1,6 +1,4 @@
 import { Request, Response, NextFunction } from 'express'
-import IORedis from 'ioredis'
-import { Redis as UpstashRedis } from '@upstash/redis'
 
 // In-memory cache store (suitable for single-instance deployment)
 interface CacheEntry {
@@ -9,37 +7,7 @@ interface CacheEntry {
 }
 
 const cache: Record<string, CacheEntry> = {}
-const redisUrl = process.env.REDIS_URL || process.env.REDIS_TLS_URL || ''
-const upstashUrl = process.env.UPSTASH_REDIS_REST_URL || ''
-const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || ''
 const cachePrefix = process.env.REDIS_CACHE_PREFIX || 'cache:'
-
-let redis: IORedis | null = null
-let upstash: UpstashRedis | null = null
-if (redisUrl) {
-  try {
-    redis = new IORedis(redisUrl, {
-      maxRetriesPerRequest: 2,
-      enableReadyCheck: true,
-    })
-    redis.on('error', (err) => {
-      console.error('Redis cache error', err)
-    })
-  } catch (err) {
-    console.error('Failed to initialize Redis cache client, falling back to memory cache', err)
-    redis = null
-  }
-} else if (upstashUrl && upstashToken) {
-  try {
-    upstash = new UpstashRedis({
-      url: upstashUrl,
-      token: upstashToken,
-    })
-  } catch (err) {
-    console.error('Failed to initialize Upstash cache client, falling back to memory cache', err)
-    upstash = null
-  }
-}
 
 const stableStringify = (input: unknown): string => {
   if (input === null || typeof input !== 'object') return JSON.stringify(input)
@@ -53,7 +21,7 @@ const stableStringify = (input: unknown): string => {
 }
 
 export function cacheMiddleware(ttlSeconds: number) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     // Only cache GET requests
     if (req.method !== 'GET') {
       return next()
@@ -62,31 +30,7 @@ export function cacheMiddleware(ttlSeconds: number) {
     const cacheKey = `${cachePrefix}${req.path}:${stableStringify(req.query || {})}`
     const now = Date.now()
 
-    if (redis) {
-      try {
-        const cached = await redis.get(cacheKey)
-        if (cached) {
-          res.setHeader('X-Cache', 'HIT')
-          return res.json(JSON.parse(cached))
-        }
-      } catch (err) {
-        console.error('Redis cache read failed; falling back to memory cache', err)
-      }
-    }
-
-    if (upstash) {
-      try {
-        const cached = await upstash.get<string>(cacheKey)
-        if (cached) {
-          res.setHeader('X-Cache', 'HIT')
-          return res.json(JSON.parse(cached))
-        }
-      } catch (err) {
-        console.error('Upstash cache read failed; falling back to memory cache', err)
-      }
-    }
-
-    // Check if cached entry exists and is not expired
+    // Check in-memory cache
     if (cache[cacheKey] && cache[cacheKey].expiry > now) {
       res.setHeader('X-Cache', 'HIT')
       return res.json(cache[cacheKey].data)
@@ -100,18 +44,6 @@ export function cacheMiddleware(ttlSeconds: number) {
       cache[cacheKey] = {
         data,
         expiry: now + ttlSeconds * 1000,
-      }
-
-      if (redis) {
-        redis
-          .set(cacheKey, JSON.stringify(data), 'EX', ttlSeconds)
-          .catch((err) => console.error('Redis cache write failed', err))
-      }
-
-      if (upstash) {
-        upstash
-          .set(cacheKey, JSON.stringify(data), { ex: ttlSeconds })
-          .catch((err) => console.error('Upstash cache write failed', err))
       }
 
       res.setHeader('X-Cache', 'MISS')

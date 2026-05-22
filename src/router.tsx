@@ -7,12 +7,8 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
   const router = useRouter();
 
   useEffect(() => {
-    const _sentryModule = ['@', 'sentry', '/react'].join('')
-    void import(_sentryModule).then((Sentry) => {
-      try { Sentry.captureException(error) } catch (_) {}
-    }).catch(() => {
-      // ignore if not installed
-    })
+    // Sentry removed — log to console for diagnostics
+    try { console.error(error) } catch (_) {}
   }, [error])
 
   return (

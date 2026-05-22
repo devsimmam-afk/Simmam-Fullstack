@@ -1,7 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import "../instrument";
+// Sentry/instrumentation removed
 
 import { AuthProvider } from "@/lib/auth";
 import { DataProvider } from "@/lib/store";
