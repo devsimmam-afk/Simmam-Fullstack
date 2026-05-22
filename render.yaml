@@ -21,8 +21,6 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: FRONTEND_URL
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
+        value: https://simmam-fullstack.vercel.app
       - key: SEED_EVENT_CATALOG
         value: "false"

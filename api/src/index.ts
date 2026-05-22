@@ -52,9 +52,50 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
 const app = express()
 app.set('trust proxy', 1)
+const localDevOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/
+const allowedOrigins = new Set<string>()
+const productionFrontendOrigins = ['https://simmam-fullstack.vercel.app']
+
+const normalizeOrigin = (value: string) => {
+  try {
+    return new URL(value).origin
+  } catch {
+    return value.replace(/\/$/, '')
+  }
+}
+
+if (FRONTEND_URL) {
+  FRONTEND_URL.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .forEach((origin) => allowedOrigins.add(normalizeOrigin(origin)))
+}
+
+productionFrontendOrigins.forEach((origin) => allowedOrigins.add(origin))
+if (!IS_PROD) {
+  allowedOrigins.add('http://localhost:5173')
+  allowedOrigins.add('http://localhost:8080')
+  allowedOrigins.add('http://127.0.0.1:5173')
+  allowedOrigins.add('http://127.0.0.1:8080')
+}
 
 const corsOptions: cors.CorsOptions = {
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true)
+      return
+    }
+
+    if (allowedOrigins.has(origin) || (!IS_PROD && localDevOriginPattern.test(origin))) {
+      callback(null, true)
+      return
+    }
+
+    const corsError = new Error(`CORS blocked origin: ${origin}`) as Error & { statusCode?: number; code?: string }
+    corsError.statusCode = 403
+    corsError.code = 'cors_blocked'
+    callback(corsError)
+  },
   credentials: false,
   optionsSuccessStatus: 204,
 }
@@ -1945,7 +1986,7 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'not_found' })
 })
 
-Sentry.setupExpressErrorHandler(app)
+app.use(Sentry.Handlers.errorHandler())
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   const error = err as Error & { statusCode?: number; code?: string; type?: string }
