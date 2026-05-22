@@ -1,13 +1,18 @@
 import { createRouter, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import * as Sentry from '@sentry/react'
+// Dynamically import Sentry in client-only code to avoid server-side module resolution
 import { routeTree } from "./routeTree.gen";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   useEffect(() => {
-    Sentry.captureException(error)
+    const _sentryModule = ['@', 'sentry', '/react'].join('')
+    void import(_sentryModule).then((Sentry) => {
+      try { Sentry.captureException(error) } catch (_) {}
+    }).catch(() => {
+      // ignore if not installed
+    })
   }, [error])
 
   return (
