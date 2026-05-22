@@ -1923,8 +1923,8 @@ const bootstrap = async () => {
     console.error('Failed to seed event catalog:', err?.message || err)
   }
 
-  app.listen(PORT, () => {
-    console.log(`API server listening on http://localhost:${PORT}`)
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`API server listening on http://0.0.0.0:${PORT}`)
   })
 }
 
