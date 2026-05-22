@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: simmam-api
+    runtime: node
+    rootDir: api
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

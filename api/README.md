@@ -20,3 +20,19 @@ Endpoints (examples):
 
 Notes:
 - This is a minimal starting point. You should add proper validation, authentication for admin endpoints, rate-limiting, and logging before production.
+
+Render deployment (Blueprint):
+
+1. Keep `render.yaml` in the repository root.
+2. In Render, click New > Blueprint and connect this repository.
+3. Render will detect `render.yaml` and create the `simmam-api` web service using the `api` folder as root.
+4. Set required secrets in Render:
+	- `SUPABASE_URL`
+	- `SUPABASE_SERVICE_ROLE`
+5. Set optional variables if used in your environment:
+	- `SUPABASE_ANON_KEY`
+	- `FRONTEND_URL`
+	- `REDIS_URL`
+	- `SENTRY_DSN`
+6. Verify health endpoint after deploy:
+	- `GET /api/health`
