@@ -5,17 +5,6 @@ import { routeTree } from "./routeTree.gen";
 
 const AUTO_RELOAD_KEY = "simmam-error-auto-reload"
 
-const isAutoReloadableError = (error: Error) => {
-  const message = `${error?.name || ""} ${error?.message || ""}`.toLowerCase()
-  return (
-    message.includes("minified react error #130") ||
-    message.includes("chunkloaderror") ||
-    message.includes("failed to fetch dynamically imported module") ||
-    message.includes("loading chunk") ||
-    message.includes("importing a module script failed")
-  )
-}
-
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
@@ -25,11 +14,11 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
     if (typeof window === 'undefined') return
 
-    if (isAutoReloadableError(error) && window.sessionStorage.getItem(AUTO_RELOAD_KEY) !== '1') {
+    if (window.sessionStorage.getItem(AUTO_RELOAD_KEY) !== '1') {
       window.sessionStorage.setItem(AUTO_RELOAD_KEY, '1')
       const timer = window.setTimeout(() => {
         window.location.reload()
-      }, 2500)
+      }, 1200)
 
       return () => window.clearTimeout(timer)
     }
@@ -56,7 +45,7 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Recovering the page</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page hit a temporary runtime error. It will try again automatically.
+          The page hit a temporary runtime error. It will reload automatically.
         </p>
         <p className="mt-2 text-xs text-muted-foreground/80">
           If it does not recover, use Reload now.
