@@ -247,6 +247,14 @@ app.use('/api/wch1925', authenticateSession, async (req, res, next) => {
   return attachAdminContext(req, res, next)
 })
 
+app.use('/api/wch1925', async (req, res, next) => {
+  if (req.path === '/auth') {
+    return next()
+  }
+
+  return adminLimiter(req, res, next)
+})
+
 // Clear any in-memory rate limiter counts when server starts (useful during dev/test)
 try {
   resetRateLimitCounts()
@@ -485,7 +493,7 @@ app.get('/api/leaderboard', publicLimiter, cacheMiddleware(60), async (_req, res
 })
 
 // Admin leaderboard
-app.get('/api/wch1925/leaderboard', adminLimiter, cacheMiddleware(60), async (_req, res) => {
+app.get('/api/wch1925/leaderboard', cacheMiddleware(60), async (_req, res) => {
   try {
     const { data, error } = await supabase
       .from('leaderboard')
@@ -499,7 +507,7 @@ app.get('/api/wch1925/leaderboard', adminLimiter, cacheMiddleware(60), async (_r
   }
 })
 
-app.get('/api/wch1925/events', adminLimiter, cacheMiddleware(60), async (_req, res) => {
+app.get('/api/wch1925/events', cacheMiddleware(60), async (_req, res) => {
   try {
     const { data, error } = await supabase
       .from('events')
@@ -514,7 +522,7 @@ app.get('/api/wch1925/events', adminLimiter, cacheMiddleware(60), async (_req, r
   }
 })
 
-app.get('/api/wch1925/houses', adminLimiter, cacheMiddleware(60), async (_req, res) => {
+app.get('/api/wch1925/houses', cacheMiddleware(60), async (_req, res) => {
   try {
     const { data, error } = await supabase.from('houses').select('id,name,accent,points,created_at,updated_at').order('name', { ascending: true })
     if (error) throw error
@@ -649,7 +657,7 @@ app.get('/api/wch1925/settings', async (_req, res) => {
   }
 })
 
-app.post('/api/wch1925/settings', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/settings', async (req, res) => {
   try {
     const parsedBody = validateRequest(adminSettingsBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -718,7 +726,7 @@ app.post('/api/wch1925/settings', adminLimiter, async (req, res) => {
   }
 })
 
-app.post('/api/wch1925/leaderboard/adjust', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/leaderboard/adjust', async (req, res) => {
   try {
     const parsedBody = validateRequest(leaderboardAdjustBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -845,7 +853,7 @@ app.get('/api/wch1925/users', async (req, res) => {
   }
 })
 
-app.post('/api/wch1925/users', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/users', async (req, res) => {
   try {
     const parsedBody = validateRequest(userCreateBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -904,7 +912,7 @@ app.get('/api/wch1925/announcements', async (_req, res) => {
   }
 })
 
-app.post('/api/wch1925/announcements', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/announcements', async (req, res) => {
   try {
     const parsedBody = validateRequest(announcementBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -953,7 +961,7 @@ app.get('/api/wch1925/rules', async (_req, res) => {
   }
 })
 
-app.post('/api/wch1925/rules', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/rules', async (req, res) => {
   try {
     const parsedBody = validateRequest(ruleBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -982,7 +990,7 @@ app.post('/api/wch1925/rules', adminLimiter, async (req, res) => {
   }
 })
 
-app.put('/api/wch1925/rules/:id', adminLimiter, async (req, res) => {
+app.put('/api/wch1925/rules/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1023,7 +1031,7 @@ app.put('/api/wch1925/rules/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/rules/:id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/rules/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1040,7 +1048,7 @@ app.delete('/api/wch1925/rules/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.put('/api/wch1925/announcements/:id', adminLimiter, async (req, res) => {
+app.put('/api/wch1925/announcements/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1080,7 +1088,7 @@ app.put('/api/wch1925/announcements/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/announcements/:id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/announcements/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1142,7 +1150,7 @@ app.get('/api/wch1925/users/:id', async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/users/:id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/users/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1171,7 +1179,7 @@ app.delete('/api/wch1925/users/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.put('/api/wch1925/users/:id', adminLimiter, async (req, res) => {
+app.put('/api/wch1925/users/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1270,7 +1278,7 @@ app.get('/api/wch1925/registrations', async (req, res) => {
   }
 })
 
-app.post('/api/wch1925/registrations', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/registrations', async (req, res) => {
   try {
     const parsedBody = validateRequest(adminRegistrationCreateBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -1349,7 +1357,7 @@ app.post('/api/wch1925/registrations', adminLimiter, async (req, res) => {
   }
 })
 
-app.put('/api/wch1925/registrations/:id', adminLimiter, async (req, res) => {
+app.put('/api/wch1925/registrations/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1458,7 +1466,7 @@ app.put('/api/wch1925/registrations/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/registrations/:id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/registrations/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1576,7 +1584,7 @@ app.get('/api/wch1925/registrations/export.csv', async (req, res) => {
 })
 
 // Admin events CRUD
-app.post('/api/wch1925/events', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/events', async (req, res) => {
   try {
     const parsedBody = validateRequest(eventCreateBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -1622,7 +1630,7 @@ app.post('/api/wch1925/events', adminLimiter, async (req, res) => {
   }
 })
 
-app.put('/api/wch1925/events/:id', adminLimiter, async (req, res) => {
+app.put('/api/wch1925/events/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1689,7 +1697,7 @@ app.put('/api/wch1925/events/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/events/:id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/events/:id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1706,7 +1714,7 @@ app.delete('/api/wch1925/events/:id', adminLimiter, async (req, res) => {
   }
 })
 
-app.post('/api/wch1925/events/:id/close-registration', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/events/:id/close-registration', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.id, req.params)
     if (!parsedParams.ok) {
@@ -1729,7 +1737,7 @@ app.post('/api/wch1925/events/:id/close-registration', adminLimiter, async (req,
 })
 
 // Attendance/check-in
-app.post('/api/wch1925/checkin', adminLimiter, async (req, res) => {
+app.post('/api/wch1925/checkin', async (req, res) => {
   try {
     const parsedBody = validateRequest(checkinBodySchema, req.body)
     if (!parsedBody.ok) {
@@ -1763,7 +1771,7 @@ app.post('/api/wch1925/checkin', adminLimiter, async (req, res) => {
   }
 })
 
-app.delete('/api/wch1925/checkin/:registration_id', adminLimiter, async (req, res) => {
+app.delete('/api/wch1925/checkin/:registration_id', async (req, res) => {
   try {
     const parsedParams = validateRequest(paramsSchemas.registrationId, req.params)
     if (!parsedParams.ok) {

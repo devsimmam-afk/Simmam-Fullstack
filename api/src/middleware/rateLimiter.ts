@@ -4,6 +4,7 @@ import { Redis as UpstashRedis } from '@upstash/redis'
 
 // In-memory store for development (replace with Redis for production)
 const requestCounts: Record<string, { count: number; resetTime: number }> = {}
+const IS_PROD = process.env.NODE_ENV === 'production'
 
 // Redis client (optional). If REDIS_URL is set, use Redis for counters across instances.
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_TLS_URL || ''
@@ -31,6 +32,11 @@ if (redisUrl) {
   }
 }
 
+const hasSharedStore = Boolean(redis || upstash)
+if (IS_PROD && !hasSharedStore) {
+  throw new Error('Redis is required for production rate limiting (set REDIS_URL or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN)')
+}
+
 function getClientIp(req: any): string {
   const cloudflareIp = req.headers['cf-connecting-ip'] as string | undefined
   const realIp = req.headers['x-real-ip'] as string | undefined
@@ -41,6 +47,15 @@ function getClientIp(req: any): string {
 function getRouteKey(req: any): string {
   const routePath = req?.route?.path ? String(req.route.path) : req.path || 'unknown'
   return `${req.method || 'GET'}:${routePath}`
+}
+
+function setRateLimitHeaders(res: Response, limit: number, remaining: number, resetSeconds: number) {
+  res.setHeader('RateLimit-Limit', String(limit))
+  res.setHeader('RateLimit-Remaining', String(Math.max(0, remaining)))
+  res.setHeader('RateLimit-Reset', String(Math.max(1, resetSeconds)))
+  res.setHeader('X-RateLimit-Limit', String(limit))
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, remaining)))
+  res.setHeader('X-RateLimit-Reset', String(Math.max(1, resetSeconds)))
 }
 
 export function createSimpleLimiter(bucket: string, windowMs: number, max: number, message: string) {
@@ -64,13 +79,13 @@ export function createSimpleLimiter(bucket: string, windowMs: number, max: numbe
           await redis.pexpire(key, windowMs)
           pttl = windowMs
         }
+        const resetSeconds = Math.ceil(pttl / 1000)
         if (count > max) {
-          const retryAfterSeconds = Math.ceil(pttl / 1000)
-          res.setHeader('Retry-After', String(retryAfterSeconds))
-          res.setHeader('RateLimit-Remaining', '0')
+          res.setHeader('Retry-After', String(resetSeconds))
+          setRateLimitHeaders(res, max, 0, resetSeconds)
           return res.status(429).json({ error: message })
         }
-        res.setHeader('RateLimit-Remaining', String(Math.max(0, max - count)))
+        setRateLimitHeaders(res, max, max - count, resetSeconds)
         return next()
       } catch (e) {
         console.error('Redis rate limiter error, falling back to memory', e)
@@ -89,18 +104,23 @@ export function createSimpleLimiter(bucket: string, windowMs: number, max: numbe
 
         if (count > max) {
           res.setHeader('Retry-After', String(ttlSeconds))
-          res.setHeader('RateLimit-Remaining', '0')
+          setRateLimitHeaders(res, max, 0, ttlSeconds)
           return res.status(429).json({ error: message })
         }
 
-        res.setHeader('RateLimit-Remaining', String(Math.max(0, max - count)))
+        setRateLimitHeaders(res, max, max - count, ttlSeconds)
         return next()
       } catch (e) {
         console.error('Upstash rate limiter error, falling back to memory', e)
       }
     }
 
-    // In-memory fallback (single-instance)
+    if (IS_PROD) {
+      console.error('Rate limiter unavailable in production: Redis/Upstash not configured or unreachable')
+      return res.status(503).json({ error: 'rate_limiter_unavailable' })
+    }
+
+    // In-memory fallback (single-instance development only)
     if (!requestCounts[key]) {
       requestCounts[key] = { count: 0, resetTime: now + windowMs }
     }
@@ -111,10 +131,11 @@ export function createSimpleLimiter(bucket: string, windowMs: number, max: numbe
     if (requestCounts[key].count > max) {
       const retryAfterSeconds = Math.ceil((requestCounts[key].resetTime - now) / 1000)
       res.setHeader('Retry-After', String(retryAfterSeconds))
-      res.setHeader('RateLimit-Remaining', '0')
+      setRateLimitHeaders(res, max, 0, retryAfterSeconds)
       return res.status(429).json({ error: message })
     }
-    res.setHeader('RateLimit-Remaining', String(Math.max(0, max - requestCounts[key].count)))
+    const resetSeconds = Math.ceil((requestCounts[key].resetTime - now) / 1000)
+    setRateLimitHeaders(res, max, max - requestCounts[key].count, resetSeconds)
     next()
   }
 }

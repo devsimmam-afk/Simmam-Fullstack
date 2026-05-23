@@ -9,6 +9,7 @@ interface CacheEntry {
 }
 
 const cache: Record<string, CacheEntry> = {}
+const IS_PROD = process.env.NODE_ENV === 'production'
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_TLS_URL || ''
 const upstashUrl = process.env.UPSTASH_REDIS_REST_URL || ''
 const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || ''
@@ -39,6 +40,11 @@ if (redisUrl) {
     console.error('Failed to initialize Upstash cache client, falling back to memory cache', err)
     upstash = null
   }
+}
+
+const hasSharedStore = Boolean(redis || upstash)
+if (IS_PROD && !hasSharedStore) {
+  throw new Error('Redis is required for production cache middleware (set REDIS_URL or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN)')
 }
 
 const stableStringify = (input: unknown): string => {
@@ -84,6 +90,11 @@ export function cacheMiddleware(ttlSeconds: number) {
       } catch (err) {
         console.error('Upstash cache read failed; falling back to memory cache', err)
       }
+    }
+
+    if (IS_PROD) {
+      console.error('Cache middleware unavailable in production: Redis/Upstash not configured or unreachable')
+      return next()
     }
 
     // Check if cached entry exists and is not expired
