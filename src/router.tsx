@@ -3,15 +3,15 @@ import { useEffect } from "react";
 // Dynamically import Sentry in client-only code to avoid server-side module resolution
 import { routeTree } from "./routeTree.gen";
 
-const AUTO_RELOAD_KEY = "simmam_error_auto_reload_attempted"
+const AUTO_RELOAD_KEY = "simmam-error-auto-reload"
 
-function isAutoReloadableError(error: Error) {
-  const message = `${error?.message || ""} ${error?.name || ""}`.toLowerCase()
+const isAutoReloadableError = (error: Error) => {
+  const message = `${error?.name || ""} ${error?.message || ""}`.toLowerCase()
   return (
     message.includes("minified react error #130") ||
     message.includes("chunkloaderror") ||
-    message.includes("loading chunk") ||
     message.includes("failed to fetch dynamically imported module") ||
+    message.includes("loading chunk") ||
     message.includes("importing a module script failed")
   )
 }
@@ -25,11 +25,8 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
     if (typeof window === 'undefined') return
 
-    const shouldAutoReload = isAutoReloadableError(error)
-    const alreadyReloaded = window.sessionStorage.getItem(AUTO_RELOAD_KEY) === 'true'
-
-    if (shouldAutoReload && !alreadyReloaded) {
-      window.sessionStorage.setItem(AUTO_RELOAD_KEY, 'true')
+    if (isAutoReloadableError(error) && window.sessionStorage.getItem(AUTO_RELOAD_KEY) !== '1') {
+      window.sessionStorage.setItem(AUTO_RELOAD_KEY, '1')
       const timer = window.setTimeout(() => {
         window.location.reload()
       }, 2500)
@@ -59,10 +56,10 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Recovering the page</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page hit a temporary loading error. We will retry automatically.
+          The page hit a temporary runtime error. It will try again automatically.
         </p>
         <p className="mt-2 text-xs text-muted-foreground/80">
-          If the page still does not recover, use Reload now.
+          If it does not recover, use Reload now.
         </p>
         {import.meta.env.DEV && error.message && (
           <pre className="mt-4 max-h-40 overflow-auto rounded-md bg-muted p-3 text-left font-mono text-xs text-destructive">
