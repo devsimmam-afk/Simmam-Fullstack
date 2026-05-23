@@ -176,32 +176,10 @@ const mapRemoteEventsToAdminEvents = (remoteEvents: Awaited<ReturnType<typeof fe
     .map((remoteEvent, index) => mapRemoteEventToAdminEvent(remoteEvent, fallbackByName.get(remoteEvent.name.toLowerCase()), index))
 };
 
-const mapStaticEventsToAdminEvents = (): AdminEvent[] =>
-  initialEvents.map((event, index) => ({
-    id: `static-event-${index + 1}`,
-    name: event.name,
-    category: event.category,
-    mainCategory: event.mainCategory,
-    icon: event.icon,
-    rules: event.rules,
-    description: '',
-    venue: '',
-    time: '',
-    date: '',
-    is_floated: true,
-    is_live_tomorrow: false,
-    registration_open: true,
-    checkin_enabled: false,
-    status: 'upcoming',
-    participantCount: 0,
-    prizeInfo: 'Trophy + Certificate',
-    order: index + 1,
-  }));
-
 // Participants are populated from the admin API; remove built-in mock generation.
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [events, setEvents] = useState<AdminEvent[]>(() => readCachedValue<AdminEvent[]>('simmam_events') || mapStaticEventsToAdminEvents());
+  const [events, setEvents] = useState<AdminEvent[]>(() => readCachedValue<AdminEvent[]>('simmam_events') || []);
   const [houses, setHouses] = useState<House[]>(() =>
     readCachedValue<House[]>('simmam_houses') || initialHouses.map((h) => ({
       ...h,
@@ -231,12 +209,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const staticEvent = initialEvents.find(se => se.name === e.name);
         return {
           ...e,
-          icon: staticEvent?.icon || initialEvents[0].icon
+          icon: staticEvent?.icon || initialEvents[0].icon // Fallback to first static icon
         };
       });
       setEvents(reattachedEvents);
     } else {
-      setEvents(mapStaticEventsToAdminEvents());
+      setEvents([]);
     }
 
     if (storedHouses) {

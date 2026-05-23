@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import "../instrument";
 
@@ -66,7 +67,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body suppressHydrationWarning>
+      <body>
         {children}
         <Scripts />
       </body>
@@ -75,6 +76,45 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    const cardSelector = [
+      "section",
+      ".glass",
+      ".glass-strong",
+      ".hover-lift",
+      ".rounded-2xl",
+      ".rounded-3xl",
+    ].join(", ");
+
+    const cards = Array.from(document.querySelectorAll<HTMLElement>(cardSelector)).filter(
+      (element) => !element.closest("header") && !element.closest("nav"),
+    );
+
+    cards.forEach((card) => {
+      card.dataset.scrollCard = "true";
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("scroll-card-visible");
+          }
+        });
+      },
+      {
+        rootMargin: "0px 0px -10% 0px",
+        threshold: 0.12,
+      },
+    );
+
+    cards.forEach((card) => observer.observe(card));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <DataProvider>
