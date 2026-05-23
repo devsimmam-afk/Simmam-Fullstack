@@ -8,6 +8,9 @@ import { fetchAnnouncements, fetchRules, type ApiAnnouncement, type ApiRule } fr
 
 const categories = ["All", "Tech", "Non-Tech", "Sports", "Cultural Fest"];
 
+const getRenderableIcon = (icon: AdminEvent["icon"] | undefined) =>
+  typeof icon === "function" ? icon : null;
+
 export function Events() {
   const { events } = useData();
   const [filter, setFilter] = useState("All");
@@ -57,6 +60,8 @@ export function Events() {
       e.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const SelectedIcon = selectedEvent ? getRenderableIcon(selectedEvent.icon) : null;
 
   return (
     <div id="events" className="relative py-24 md:py-32">
@@ -136,43 +141,44 @@ export function Events() {
 
         {/* Event grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {list.map((e, index) => (
-            <Tilt3D key={`${e.name}-${e.category}-${index}`} max={10}>
-              <div
-                onClick={() => setSelectedEvent(e)}
-                className="group relative glass rounded-2xl p-5 hover-lift overflow-hidden h-full cursor-pointer"
-              >
-                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl bg-[var(--gold)]/30 opacity-50 group-hover:opacity-90 transition" />
-                <div className="relative flex items-start justify-between">
-                  <div className="p-3 rounded-xl bg-gold/10 text-gold neon-border group-hover:scale-110 transition-transform">
-                    {e.icon ? <e.icon className="w-5 h-5" /> : <div className="w-5 h-5 bg-gold/20 rounded" />}
+          {list.map((e, index) => {
+            const EventIcon = getRenderableIcon(e.icon)
+
+            return (
+              <Tilt3D key={`${e.name}-${e.category}-${index}`} max={10}>
+                <div
+                  onClick={() => setSelectedEvent(e)}
+                  className="group relative glass rounded-2xl p-5 hover-lift overflow-hidden h-full cursor-pointer"
+                >
+                  <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl bg-[var(--gold)]/30 opacity-50 group-hover:opacity-90 transition" />
+                  <div className="relative flex items-start justify-end">
+                    <span className="text-[10px] tracking-[0.25em] text-foreground/50">
+                      {e.category.toUpperCase()}
+                    </span>
                   </div>
-                  <span className="text-[10px] tracking-[0.25em] text-foreground/50">
-                    {e.category.toUpperCase()}
-                  </span>
-                </div>
-                <div className="relative mt-5">
-                  <div className="font-display text-xl font-bold text-foreground">
-                    {e.name}
+                  <div className="relative mt-5">
+                    <div className="font-display text-xl font-bold text-foreground">
+                      {e.name}
+                    </div>
+                  </div>
+                  <div className="relative mt-5 w-full flex gap-2">
+                    <div className="flex-1 py-2.5 rounded-lg text-xs font-semibold border border-[var(--gold)]/30 text-[var(--gold)] hover:bg-[var(--gold)]/10 transition text-center flex items-center justify-center">
+                      View Details
+                    </div>
+                    {e.registration_open && (
+                      <Link
+                        to="/register"
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="flex-1 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-[var(--crimson)] to-[var(--gold)] text-white hover:opacity-90 transition text-center flex items-center justify-center"
+                      >
+                        Register Now
+                      </Link>
+                    )}
                   </div>
                 </div>
-                <div className="relative mt-5 w-full flex gap-2">
-                  <div className="flex-1 py-2.5 rounded-lg text-xs font-semibold border border-[var(--gold)]/30 text-[var(--gold)] hover:bg-[var(--gold)]/10 transition text-center flex items-center justify-center">
-                    View Details
-                  </div>
-                  {e.registration_open && (
-                    <Link
-                      to="/register"
-                      onClick={(ev) => ev.stopPropagation()}
-                      className="flex-1 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-[var(--crimson)] to-[var(--gold)] text-white hover:opacity-90 transition text-center flex items-center justify-center"
-                    >
-                      Register Now
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </Tilt3D>
-          ))}
+              </Tilt3D>
+            )
+          })}
         </div>
 
         {/* ── Rules Modal ───────────────────────────────────────── */}
@@ -193,7 +199,7 @@ export function Events() {
 
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-3 rounded-xl bg-gold/10 text-gold neon-border">
-                  {selectedEvent.icon ? <selectedEvent.icon className="w-6 h-6" /> : <div className="w-6 h-6 bg-gold/20 rounded" />}
+                  {SelectedIcon ? <SelectedIcon className="w-6 h-6" /> : <div className="w-6 h-6 bg-gold/20 rounded" />}
                 </div>
                 <div>
                   <h3 className="font-display text-2xl font-bold text-foreground">
